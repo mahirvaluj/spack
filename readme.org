@@ -90,11 +90,9 @@
        Type: INTEGER
        Value: 1234567890
        Type: FLOAT32
-       Value: 1178657997 ;; Note that this is an intermediate representation
-                         ;; to allow for serialization to IEEE floats, they
-                         ;; shouldn't be accessed directly like this
+       Value: 12345.2
        Type: FLOAT64
-       Value: 4668012459802073498
+       Value: 12345.2
        Type: STRING
        Value: #(116 101 115 116 105 110 103)
        Type: (ARRAY INTEGER)
@@ -102,7 +100,7 @@
        Type: (ARRAY BYTE)
        Value: #(1 2 3 4)
        Type: (ARRAY FLOAT32)
-       Value: #(1069547520 1075000115 1078774989 1083598438)
+       Value: #(1.5 2.3 3.2 4.7)
        NIL
        SPACK> 
      #+end_src
