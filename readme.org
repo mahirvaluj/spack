@@ -7,25 +7,27 @@
    The various datatypes it supports as well as their encoding are as
    follows:
   
-   | Types                                  | encoding                                                  |
-   |----------------------------------------+-----------------------------------------------------------|
-   | integer (encoded as signed leb-128)    | ~0x01~                                                    |
-   | float32 (ieee single precision)        | ~0x02~                                                    |
-   | float64 (ieee double precision)        | ~0x03~                                                    |
-   | byte                                   | ~0x04~                                                    |
-   | utf-8 string                           | ~0x05~ for start, followed by size in bytes               |
-   | a non-zero repitition of the above     | ~0x10~ for start, followed by type, followed by num elems |
-   | a non-empty det. grouping of the above | ~0x20~ for start, ~0x21~ for end (note nested allowed)    |
-  
-   The packet will then send the type information, followed by the
-   data. There will be a header consisting of two elements: the sha-256
-   hash of the packet (256 bits, 32 bytes), followed by the size in
-   bytes of the type information (leb-128), followed by the size in
-   bytes of the data (leb-128), followed by the type information,
-   followed by the data.
+   | Types                               | encoding                                                  |
+   |-------------------------------------+-----------------------------------------------------------|
+   | integer (encoded as signed leb-128) | ~0x01~                                                    |
+   | float32 (ieee single precision)     | ~0x02~                                                    |
+   | float64 (ieee double precision)     | ~0x03~                                                    |
+   | byte                                | ~0x04~                                                    |
+   | utf-8 string                        | ~0x05~ for start, followed by size in bytes               |
+   | a non-zero array of a single type   | ~0x10~ for start, followed by type, followed by num elems |
+   
+   Arrays can only be one-dimensional. They cannot contain strings.
+   
+   To create a byte array, pass ~:byte-array~ to ~spush~.
+
+   The packet created by ~out~ will contain a header consisting of
+   three elements: the sha-256 hash of the packet (256 bits, 32
+   bytes), followed by the size in bytes of the type information
+   (leb-128), followed by the size in bytes of the data (leb-128),
+   followed by the type information, followed by the data.
 
 ** API
-   The API is designed for languages which have powerful macro
-   systems. It will first be implemented for common lisp.
-   
+   The API is designed for languages which have runtime polymorphism
+   of functions and/or powerful type systems and/or macro systems. It
+   is implemented here for Common Lisp, but is easily reimplemented.
    

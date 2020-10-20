@@ -8,7 +8,7 @@
 (in-package :spack)
 
 (defclass spack-elem ()
-  ((elem-type;; :integer, :float32, :float64, :byte, :string, :array '(type num), '(type1 type2 type3)
+  ((elem-type;; :integer, :float32, :float64, :byte, :string, (:array type), '(type1 type2 type3)
      :initarg :elem-type
      :accessor elem-type)
    (val
@@ -58,14 +58,36 @@
                         :val elem)
          :spack-elem packet))
 
+(defmethod spush ((elem array) (type (eql :byte-array)) (packet spack))
+  "Special case to make a byte-array (I am pretty sure this would be
+ useful)"
+  (loop for i across elem do (assert (and (> i 0) (< i 256))))
+  (spush (make-instance 'spack-elem
+                        :elem-type '(:array :byte)
+                        :val elem)
+         :spack-elem packet))
+
+(defun parse-array (a)
+  "Parses array into a spack-elem object. Returns values [value type]."
+  (cond ((typep (aref a 0) 'integer)
+         (values a '(:array :integer)))
+        ((typep (aref a 0) 'single-float)
+         (values (map 'vector #'(lambda (i) (ieee-floats:encode-float32 i)) a) '(:array :float32)))
+        ((typep (aref a 0) 'double-float)
+         (values (map 'vector #'(lambda (i) (ieee-floats:encode-float64 i)) a) '(:array :float64)))
+        ((typep (aref a 0) 'string)
+         (error "Arrays cannot contain strings!"))
+        (t
+         (error "Bad type passed to array!"))))
+
 (defmethod spush ((elem array) (type (eql :array)) (packet spack))
   "Push an array onto spack, all elements must have the same type (can
    be struct)"
-  (error "not implemented yet"))
-
-(defmethod spush ((elem list) (type (eql :group)) (packet spack))
-  "Push a group of items onto spack (represented as a list of items)"
-  (error "not implemented yet"))
+  (multiple-value-bind (a type) (parse-array elem)
+    (spush (make-instance 'spack-elem
+                          :elem-type type
+                          :val a)
+           :spack-elem packet)))
 
 (defun vector-push-buf-extend (buf vec)
   "This loops over buf and pushes each item onto vec"
@@ -105,11 +127,23 @@
                                       typebuf)
               (vector-push-buf-extend (val elem)
                                       elembuf)))
-           ((eq (elem-type elem) :array)
-            (error "not implemented yet")
-            )
-           ((eq (elem-type elem) :group)
-            (error "not implemented yet"))
+           ((and (consp (elem-type elem)) (eq (car (elem-type elem)) :array))
+            (let ((atype (case (cadr (elem-type elem))
+                           (:integer #x01) (:float32 #x02)
+                           (:float64 #x03) (:byte #x04) (t (error "Bad type in array")))))
+              (vector-push-extend #x10 typebuf)
+              (vector-push-extend atype typebuf)
+              (vector-push-buf-extend (leb128:encode-signed (length (val elem))) typebuf)
+              (cond ((= atype #x1)
+                     (loop for ai across (val elem) do (vector-push-buf-extend (leb128:encode-signed ai) elembuf)))
+                    ((= atype #x2)
+                     (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int32->octets ai) elembuf)))
+                    ((= atype #x3)
+                     (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int64->octets ai) elembuf)))
+                    ((= atype #x4)
+                     (loop for ai across (val elem) do (vector-push-extend ai elembuf))))))
+           
+
            (t (error (format nil "bad type ~A passed to out" (elem-type elem))))))
     ;; NOTE: This is badly done, but ironclad doesn't support non-simple vectors??
     (let ((buf (concatenate '(vector (unsigned-byte 8))
@@ -196,9 +230,44 @@ things. A value, and an integer"
                             slen))
                   (spush s :string spack))))
              ((eq (aref buf i) #x10)
-              (error "Not implemented yet!"))
-             ((eq (aref buf i) #x20)
-              (error "Not implemented yet!"))
+              (progn
+                (incf i)
+                (let ((atype) (alen) (a))
+                  (parse-and-increment atype i
+                    (values (aref buf i) 1))
+                  (parse-and-increment alen i
+                    (leb128:decode-signed buf :start i))
+                  (setf a (make-array alen))
+                  (cond ((eql atype #x01)
+                         (let ((x))
+                           (loop for ai from 0 below alen do
+                                (parse-and-increment x vi (leb128:decode-signed buf :start vi))
+                                (setf (aref a ai) x))
+                           (spush a :array spack)))
+                        ((eql atype #x02)
+                         (let ((x))
+                           (loop for ai from 0 below alen do
+                                (parse-and-increment x vi
+                                  (values (ieee-floats:decode-float32 (cl-intbytes:octets->int32 (subseq buf vi (+ vi 4))))
+                                          4))
+                                (setf (aref a ai) x))
+                           (spush a :array spack)))
+                        ((eql atype #x03)
+                         (let ((x))
+                           (loop for ai from 0 below alen do
+                                (parse-and-increment x vi
+                                  (values (ieee-floats:decode-float64 (cl-intbytes:octets->int64 (subseq buf vi (+ vi 8))))
+                                          8))
+                                (setf (aref a ai) x))
+                           (spush a :array spack)))
+                        ((eql atype #x04)
+                         (let ((x))
+                           (loop for ai from 0 below alen do
+                                (parse-and-increment x vi
+                                  (values (aref buf vi) 1))
+                                (setf (aref a ai) x))
+                           (spush a :byte-array spack)))
+                        (t (error (format nil "bad type ~A found when parsing array" atype)))))))
              (t
               (error (format nil "bad type ~A found in buffer being parsed at index ~A" (aref buf i) i))))))
     spack))
