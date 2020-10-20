@@ -1,7 +1,8 @@
 (defpackage :spack
   (:use :cl)
   (:export :spack-elem :spack
-           :spush :out))
+           :spush :out :parse
+           :make-spack))
 
 ;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad))
 

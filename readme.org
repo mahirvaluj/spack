@@ -1,5 +1,5 @@
 * spack
-  ~spack~ is a way for you to send structured data over TCP.
+  ~spack~ is a way for you to serialize structured data.
   
 ** Binary format
    Float values are stored in little endian.
@@ -30,4 +30,82 @@
    The API is designed for languages which have runtime polymorphism
    of functions and/or powerful type systems and/or macro systems. It
    is implemented here for Common Lisp, but is easily reimplemented.
+   
+   
+*** class: ~spack~
+    A ~spack~ object only has one slot, a vector of ~spack-elem~
+    objects. You don't really use ~spack-elem~ s directly, but instead
+    interact with them through ~spush~. 
+    
+*** class: ~spack-elem~
+    Has two slots: ~elem-type~ and ~val~. You should't ever use these
+    directly, and instead interface through it as shown below:
+    
+    
+*** function: ~push~
+    Takes three arguments. The value to push, the type of the value,
+    and the ~spack~ to push it onto. Types can be one of: ~integer~,
+    ~float32~, ~float64~, ~string~ (can either pass a utf-8 encoded
+    ~'(unsigned-byte 8)~ buffer, or a string, which will be encoded as
+    utf-8), ~array~, or ~byte-array~.
+
+*** function: ~out~
+    Takes a single ~spack~ object, and will output the serialization
+    of that object.
+    
+*** function: ~parse~
+    Takes the serialization produced by ~out~, and turns it into the
+    object once more
+
+**** Short Tutorial
+     #+begin_src lisp
+       SPACK> (setf *spack* (make-instance 'spack))
+       #<SPACK {1002D27413}>
+       SPACK> (spush 1234567890 :integer *spack*)
+       0
+       SPACK> (spush 12345.2 :float32 *spack*)
+       1
+       SPACK> (spush 12345.2d0 :float64 *spack*)
+       2
+       SPACK> (spush "testing" :string *spack*)
+       3
+       SPACK> (spush #(1 2 3 4) :array *spack*)
+       4
+       SPACK> (spush #(1 2 3 4) :byte-array *spack*)
+       5
+       SPACK> (spush #(1.5 2.3 3.2 4.7) :array *spack*)
+       6
+       SPACK> (defparameter *spack-out* (out *spack*))
+       ,*SPACK-OUT*
+       SPACK> *spack-out*
+       #(236 190 244 174 238 150 103 34 19 24 108 195 2 80 74 122 149 5 144 198 121
+         204 63 111 120 0 25 83 155 19 144 246 14 48 1 2 3 5 7 16 1 4 16 4 4 16 2 4
+         210 133 216 204 4 205 228 64 70 154 153 153 153 153 28 200 64 116 101 115 116
+         105 110 103 1 2 3 4 1 2 3 4 0 0 192 63 51 51 19 64 205 204 76 64 102 102 150
+         64)
+       SPACK> (parse *spack-out*)
+       #<SPACK {10020CD8B3}>
+       SPACK> (loop for i across (elements (parse *spack-out*)) do
+                   (format t "Type: ~A~%Value: ~A~%" (elem-type i) (val i)))
+       Type: INTEGER
+       Value: 1234567890
+       Type: FLOAT32
+       Value: 1178657997 ;; Note that this is an intermediate representation
+                         ;; to allow for serialization to IEEE floats, they
+                         ;; shouldn't be accessed directly like this
+       Type: FLOAT64
+       Value: 4668012459802073498
+       Type: STRING
+       Value: #(116 101 115 116 105 110 103)
+       Type: (ARRAY INTEGER)
+       Value: #(1 2 3 4)
+       Type: (ARRAY BYTE)
+       Value: #(1 2 3 4)
+       Type: (ARRAY FLOAT32)
+       Value: #(1069547520 1075000115 1078774989 1083598438)
+       NIL
+       SPACK> 
+     #+end_src
+
+    
    
