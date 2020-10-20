@@ -1,8 +1,7 @@
 (defpackage :spack
   (:use :cl)
   (:export :spack-elem :spack
-           :spush :out :parse
-           :make-spack))
+           :spush :out :parse))
 
 ;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad))
 
@@ -32,11 +31,11 @@
 
 (defmethod spush ((elem single-float) (type (eql :float32)) (packet spack))
   "Push a float32 onto spack."
-  (spush (make-instance 'spack-elem :elem-type :float32 :val (ieee-floats:encode-float32 elem)) :spack-elem packet))
+  (spush (make-instance 'spack-elem :elem-type :float32 :val elem) :spack-elem packet))
 
 (defmethod spush ((elem double-float) (type (eql :float64)) (packet spack))
   "Push a float64 onto spack."
-  (spush (make-instance 'spack-elem :elem-type :float64 :val (ieee-floats:encode-float64 elem)) :spack-elem packet))
+  (spush (make-instance 'spack-elem :elem-type :float64 :val elem) :spack-elem packet))
 
 (defmethod spush ((elem integer) (type (eql :byte)) (packet spack))
   "Push a single byte onto spack"
@@ -73,9 +72,9 @@
   (cond ((typep (aref a 0) 'integer)
          (values a '(:array :integer)))
         ((typep (aref a 0) 'single-float)
-         (values (map 'vector #'(lambda (i) (ieee-floats:encode-float32 i)) a) '(:array :float32)))
+         (values a '(:array :float32)))
         ((typep (aref a 0) 'double-float)
-         (values (map 'vector #'(lambda (i) (ieee-floats:encode-float64 i)) a) '(:array :float64)))
+         (values a '(:array :float64)))
         ((typep (aref a 0) 'string)
          (error "Arrays cannot contain strings!"))
         (t
@@ -110,12 +109,12 @@
            ((eq (elem-type elem) :float32)
             (progn
               (vector-push-extend #x02 typebuf)
-              (vector-push-buf-extend (cl-intbytes:int32->octets (val elem))
+              (vector-push-buf-extend (cl-intbytes:int32->octets (ieee-floats:encode-float32 (val elem)))
                                       elembuf)))
            ((eq (elem-type elem) :float64)
             (progn
               (vector-push-extend #x03 typebuf)
-              (vector-push-buf-extend (cl-intbytes:int64->octets (val elem))
+              (vector-push-buf-extend (cl-intbytes:int64->octets (ieee-floats:encode-float64 (val elem)))
                                       elembuf)))
            ((eq (elem-type elem) :byte)
             (progn
@@ -138,9 +137,9 @@
               (cond ((= atype #x1)
                      (loop for ai across (val elem) do (vector-push-buf-extend (leb128:encode-signed ai) elembuf)))
                     ((= atype #x2)
-                     (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int32->octets ai) elembuf)))
+                     (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int32->octets (ieee-floats:encode-float32 ai)) elembuf)))
                     ((= atype #x3)
-                     (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int64->octets ai) elembuf)))
+                     (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int64->octets (ieee-floats:encode-float64 ai)) elembuf)))
                     ((= atype #x4)
                      (loop for ai across (val elem) do (vector-push-extend ai elembuf))))))
            
