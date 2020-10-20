@@ -42,7 +42,7 @@
     directly, and instead interface through it as shown below:
     
     
-*** function: ~push~
+*** function: ~spush~
     Takes three arguments. The value to push, the type of the value,
     and the ~spack~ to push it onto. Types can be one of: ~integer~,
     ~float32~, ~float64~, ~string~ (can either pass a utf-8 encoded
