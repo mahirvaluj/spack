@@ -3,7 +3,7 @@
   (:export :spack-elem :spack
            :spush :out :parse))
 
-;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad))
+;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad :cl-leb128))
 
 (in-package :spack)
 
@@ -180,7 +180,6 @@ things. A value, and an integer"
     (loop for i in vars do (push (gensym) tag-acc))
     `(multiple-value-bind (,@tag-acc) ,form
        ,@(map 'list #'(lambda (var val) `(setf ,var ,val)) vars tag-acc))))
-
 
 (defun parse (buf)
   (unless (verify-sha-integrity buf)
