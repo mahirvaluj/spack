@@ -1,7 +1,7 @@
 (defpackage :spack
   (:use :cl)
-  (:export :spack-elem :spack
-           :spush :out :parse))
+  (:export :spack-elem :spack :elements :val :elem-type
+           :spush :out :parse :make-and-push))
 
 ;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad :cl-leb128))
 
@@ -47,7 +47,7 @@
   "Push a string encoded as utf-8 onto spack"
   (spush (make-instance 'spack-elem
                         :elem-type :string
-                        :val (trivial-utf-8:string-to-utf-8-bytes elem))
+                        :val elem)
          :spack-elem packet))
 
 (defmethod spush ((elem array) (type (eql :string)) (packet spack))
@@ -55,7 +55,7 @@
   (loop for i across elem do (assert (and (> i 0) (< i 256))))
   (spush (make-instance 'spack-elem
                         :elem-type :string
-                        :val elem)
+                        :val (trivial-utf-8:utf-8-bytes-to-string elem))
          :spack-elem packet))
 
 (defmethod spush ((elem array) (type (eql :byte-array)) (packet spack))
@@ -66,6 +66,14 @@
                         :elem-type '(:array :byte)
                         :val elem)
          :spack-elem packet))
+
+(defmacro make-and-push (&rest elems)
+  "Convenience macro to allow for creating throwaway spack objects
+Pass this function tuples for val and type (make-and-push (val :type) (val :type) etc)"
+  (let ((sp (gensym)))
+    `(let ((,sp (make-instance 'spack:spack)))
+       ,@(loop for i in elems collect `(spack:spush ,(car i) ,(cadr i) ,sp))
+       ,sp)))
 
 (defun parse-array (a)
   "Parses array into a spack-elem object. Returns values [value type]."
@@ -125,7 +133,7 @@
               (vector-push-extend #x05 typebuf)
               (vector-push-buf-extend (leb128:encode-signed (length (val elem)))
                                       typebuf)
-              (vector-push-buf-extend (val elem)
+              (vector-push-buf-extend (trivial-utf-8:string-to-utf-8-bytes (val elem))
                                       elembuf)))
            ((and (consp (elem-type elem)) (eq (car (elem-type elem)) :array))
             (let ((atype (case (cadr (elem-type elem))
@@ -159,6 +167,7 @@
     (loop for i from 0 below (length digest)
        do (unless (= (aref buf i) (aref digest i)) (return-from verify-sha-integrity nil)))
     t))
+
 
 (defmacro with-gensyms (syms &body body)
   `(let ,(loop for s in syms collect `(,s (gensym)))
@@ -278,3 +287,4 @@ things. A value, and an integer"
              (t
               (error (format nil "bad type ~A found in buffer being parsed at index ~A" (aref buf i) i))))))
     spack))
+
