@@ -142,8 +142,6 @@
                      (loop for ai across (val elem) do (vector-push-buf-extend (cl-intbytes:int64->octets (ieee-floats:encode-float64 ai)) elembuf)))
                     ((= atype #x4)
                      (loop for ai across (val elem) do (vector-push-extend ai elembuf))))))
-           
-
            (t (error (format nil "bad type ~A passed to out" (elem-type elem))))))
     ;; NOTE: This is badly done, but ironclad doesn't support non-simple vectors??
     (let ((buf (concatenate '(vector (unsigned-byte 8))
@@ -181,7 +179,17 @@ things. A value, and an integer"
     `(multiple-value-bind (,@tag-acc) ,form
        ,@(map 'list #'(lambda (var val) `(setf ,var ,val)) vars tag-acc))))
 
-(defun parse (buf)
+(defmethod parse ((in stream))
+  (let ((buf (make-array 512 :fill-pointer 0 :element-type '(unsigned-byte 8) :adjustable t))
+        (typelen) (varlen))
+    (loop for i from 0 below 32 do (vector-push-extend (read-byte in) buf))
+    (setf typelen (leb128:decode-signed in)
+          varlen (leb128:decode-signed in))
+    (loop for i from 0 below typelen do (vector-push-extend (read-byte in) buf))
+    (loop for i from 0 below varlen do (vector-push-extend (read-byte in) buf))
+    (parse buf)))
+
+(defmethod parse ((buf array))
   (unless (verify-sha-integrity buf)
     (error "data corruption has occured. Hash digest does not check
     out."))
