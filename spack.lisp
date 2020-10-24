@@ -1,7 +1,7 @@
 (defpackage :spack
   (:use :cl)
   (:export :spack-elem :spack :elements :val :elem-type
-           :spush :out :parse :make-and-push :destructuring-parse))
+           :spush :out :parse :make-and-push :destructuring-elements))
 
 ;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad :cl-leb128))
 
@@ -52,7 +52,7 @@
 
 (defmethod spush ((elem array) (type (eql :string)) (packet spack))
   "Push a string already encoded as utf-8 onto spack"
-  (loop for i across elem do (assert (and (> i 0) (< i 256))))
+  (loop for i across elem do (assert (and (>= i 0) (< i 256))))
   (spush (make-instance 'spack-elem
                         :elem-type :string
                         :val (trivial-utf-8:utf-8-bytes-to-string elem))
@@ -61,7 +61,7 @@
 (defmethod spush ((elem array) (type (eql :byte-array)) (packet spack))
   "Special case to make a byte-array (I am pretty sure this would be
  useful)"
-  (loop for i across elem do (assert (and (> i 0) (< i 256))))
+  (loop for i across elem do (assert (and (>= i 0) (< i 256))))
   (spush (make-instance 'spack-elem
                         :elem-type '(:array :byte)
                         :val elem)
@@ -199,6 +199,8 @@ things. A value, and an integer"
     (loop for i from 0 below 32 do (vector-push-extend (read-byte in) buf))
     (setf typelen (leb128:decode-signed in)
           varlen (leb128:decode-signed in))
+    (vector-push-buf-extend (leb128:encode-signed typelen) buf)
+    (vector-push-buf-extend (leb128:encode-signed varlen) buf)
     (loop for i from 0 below typelen do (vector-push-extend (read-byte in) buf))
     (loop for i from 0 below varlen do (vector-push-extend (read-byte in) buf))
     (parse buf)))
