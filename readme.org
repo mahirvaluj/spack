@@ -111,7 +111,7 @@
        Type: (ARRAY FLOAT32)
        Value: #(1.5 2.3 3.2 4.7)
        NIL
-       CL-USER> (spack:destructuring-parse (a b c d) 
+       CL-USER> (spack:destructuring-elements (a b c d) 
                     (spack:make-and-push (1 :integer) 
                                          (2 :byte) 
                                          (5.3 :float32) 

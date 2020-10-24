@@ -188,7 +188,7 @@ things. A value, and an integer"
     `(multiple-value-bind (,@tag-acc) ,form
        ,@(map 'list #'(lambda (var val) `(setf ,var ,val)) vars tag-acc))))
 
-(defmacro destructuring-parse (vars spack-obj &body body)
+(defmacro destructuring-elements (vars spack-obj &body body)
   `(destructuring-bind ,vars
        (map 'list #'(lambda (x) (val x)) (elements ,spack-obj))
      ,@body))
