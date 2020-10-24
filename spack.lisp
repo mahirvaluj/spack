@@ -1,7 +1,7 @@
 (defpackage :spack
   (:use :cl)
   (:export :spack-elem :spack :elements :val :elem-type
-           :spush :out :parse :make-and-push))
+           :spush :out :parse :make-and-push :destructuring-parse))
 
 ;; (ql:quickload '(:ieee-floats :trivial-utf-8 :cl-intbytes :ironclad :cl-leb128))
 
@@ -187,6 +187,11 @@ things. A value, and an integer"
     (loop for i in vars do (push (gensym) tag-acc))
     `(multiple-value-bind (,@tag-acc) ,form
        ,@(map 'list #'(lambda (var val) `(setf ,var ,val)) vars tag-acc))))
+
+(defmacro destructuring-parse (vars spack-obj &body body)
+  `(destructuring-bind ,vars
+       (map 'list #'(lambda (x) (val x)) (elements ,spack-obj))
+     ,@body))
 
 (defmethod parse ((in stream))
   (let ((buf (make-array 512 :fill-pointer 0 :element-type '(unsigned-byte 8) :adjustable t))
