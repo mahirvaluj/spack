@@ -57,13 +57,13 @@
     Takes the serialization produced by ~out~, and turns it into the
     object once more
     
-*** macro: ~make-and-parse~
+*** macro: ~make-and-push~
     Takes a list of tuples ~(obj type)~, such as ~(2 :integer)~ and
     create a spack object with these elements
 
-*** macro: ~destructuring-parse~
-    Like destructuring-bind, takes a list of objects and then assigns
-    the spack object value to each one in the same way as
+*** macro: ~destructuring-elements~
+    Like destructuring-bind, takes a list of symbols and a  spack object 
+    and then assigns to each symbol a corresponding value in the same way as
     ~destructuring-bind~ does (it actually uses it under the hood)
 
 **** Short Tutorial
