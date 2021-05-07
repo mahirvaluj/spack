@@ -209,6 +209,7 @@ things. A value, and an integer"
   (unless (verify-sha-integrity buf)
     (error "data corruption has occured. Hash digest does not check
     out."))
+  (print "hello")
   (let ((spack (make-instance 'spack)) (i 32) (types-size) (vals-size) (vi) (types-start))
     (parse-and-increment types-size i (leb128:decode-signed buf :start i))
     (parse-and-increment vals-size i (leb128:decode-signed buf :start i))
@@ -260,15 +261,17 @@ things. A value, and an integer"
                     (values (aref buf i) 1))
                   (parse-and-increment alen i
                     (leb128:decode-signed buf :start i))
-                  (setf a (make-array alen))
+                  
                   (cond ((eql atype #x01)
                          (let ((x))
+                           (setf a (make-array alen :element-type 'integer))
                            (loop for ai from 0 below alen do
                                 (parse-and-increment x vi (leb128:decode-signed buf :start vi))
                                 (setf (aref a ai) x))
                            (spush a :array spack)))
                         ((eql atype #x02)
                          (let ((x))
+                           (setf a (make-array alen :element-type 'single-float))
                            (loop for ai from 0 below alen do
                                 (parse-and-increment x vi
                                   (values (ieee-floats:decode-float32 (cl-intbytes:octets->int32 (subseq buf vi (+ vi 4))))
@@ -277,6 +280,7 @@ things. A value, and an integer"
                            (spush a :array spack)))
                         ((eql atype #x03)
                          (let ((x))
+                           (setf a (make-array alen :element-type 'double-float))
                            (loop for ai from 0 below alen do
                                 (parse-and-increment x vi
                                   (values (ieee-floats:decode-float64 (cl-intbytes:octets->int64 (subseq buf vi (+ vi 8))))
@@ -285,6 +289,7 @@ things. A value, and an integer"
                            (spush a :array spack)))
                         ((eql atype #x04)
                          (let ((x))
+                           (setf a (make-array alen :element-type '(unsigned-byte 8)))
                            (loop for ai from 0 below alen do
                                 (parse-and-increment x vi
                                   (values (aref buf vi) 1))
